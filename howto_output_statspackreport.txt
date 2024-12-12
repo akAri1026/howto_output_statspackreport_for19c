@@ -1,0 +1,63 @@
+	//StatsPackを格納する表領域を用意　めんどくさいので以下のコマンドを使いOMF管理表領域にする
+
+alter system set db_create_file_dest='/u01/app/oracle/oradata/ORCL'; //パスはあなたの環境によって変更する。
+
+create tablespace statspack datafile size 300m;　//表領域の名前は適当に変えてね
+
+select * from v$tablespace;　//表領域が作成されていることを確認
+
+@?/rdbms/admin/spcreate.sql　//スクリプトを実行
+
+perfstat_passwordに値を入力してください:　//新しく設定するパスワードです
+
+default_tablespaceに値を入力してください: statspack　//さっき作った表領域を入力
+
+temporary_tablespaceに値を入力してください: temp　//一時表領域を指定させられます。最初からあるのを使いました。もちろん作成しても良い。
+
+	//ここから長々と出力がある
+	//セッションが変更されました。で終わっているはず。途中”FALSE”や"errors"の表記が見られるかもしれないがこの後正常に実行できるなら気にしなくてよい。
+	
+execute statspack.modify_statspack_parameter(i_snap_level=>7)　//取得レベルを決めるプロシージャの実行
+
+connect perfstat/****　//perfstatユーザーにセッションを変更　****部分はもちろん先ほど決めたパスワード
+
+execute statspack.snap　//スナップショットを取得
+
+select snap_id, instance_number, snap_time from stats$snapshot;　//正常に取得出来ているか確認
+
+	//何らか処理をする
+	
+execute statspack.snap　//再度スナップショットを取得
+
+select snap_id, instance_number, snap_time from stats$snapshot;　//再度正常に取得出来ているか確認
+
+   SNAP_ID SNAP_TIM
+---------- --------
+         1 24-12-13
+        11 24-12-13
+//snap_idを見ておく
+
+cd $ORACLE_HOME/rdbms/admin //いったんOSの操作に戻り、スクリプトが格納されたディレクトリへ移動
+
+sqlplus perfstat/**** //perfstatユーザーで接続
+
+SQL> @spreport.sql //スクリプトを実行
+
+begin_snapに値を入力してください: 1　//開始IDを入力
+Begin Snapshot Id specified: 1
+
+end_snapに値を入力してください: 11　//終了IDを入力
+End   Snapshot Id specified: 11
+
+
+
+Specify the Report Name
+~~~~~~~~~~~~~~~~~~~~~~~
+The default report file name is sp_1_11.  To use this name,
+press <return> to continue, otherwise enter an alternative.
+
+report_nameに値を入力してください:
+
+Using the report name sp_1_11　//名前を決めなければ"sp_開始ID_終了ID"となる
+
+
